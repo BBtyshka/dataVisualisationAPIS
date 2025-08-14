@@ -1,15 +1,42 @@
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
+import requests
+import os
+from dotenv import load_dotenv
 
-client_id = 'your_client_id'
-client_secret = 'your_client_secret'
+load_dotenv()
 
-client_credentials_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
-sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+client_id = os.getenv("SP_CLIENT")
+client_secret = os.getenv("SP_SECRET")
 
-playlist_id = '37i9dQZF1DXcBWIGoYBM5M'  # Today's Top Hits playlist ID
+if client_secret and client_id:
 
-results = sp.playlist_tracks(playlist_id)
-for item in results['items']:
-    track = item['track']
-    print(f"{track['name']} by {track['artists'][0]['name']} - Popularity: {track['popularity']}")
+    cred = requests.post(url="https://accounts.spotify.com/api/token", 
+                     headers={"Content-Type": "application/x-www-form-urlencoded"},
+                     data={'grant_type':'client_credentials'},
+                     auth=(client_id, client_secret))
+    
+    access_token = cred.json()['access_token']
+    
+    print(cred.json())
+    print(access_token)
+
+    playlist_id = '37i9dQZEVXbMDoHDwVN2tF'
+
+    response = requests.get(url=f'https://api.spotify.com/v1/playlists/{playlist_id}',
+                            headers={'Authorization': f'Bearer {access_token}'}).json()
+    
+    
+    if 'error' not in response:
+        artist_names = []
+        for item in response['tracks']['items']:
+            for artist in item['track']['artists']:
+                artist_names.append(artist['name'])
+
+        print(artist_names)
+    else:
+        e = response['error']['status']
+        m = response['error']['message']
+        print(f'{e}: {m}')
+
+    
+else:
+    print("No id or secret")
